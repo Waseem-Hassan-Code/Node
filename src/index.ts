@@ -1,10 +1,12 @@
-import express, { Router } from "express";
+import express from "express";
 import http from "http";
-import bodyParse from "body-parser";
+import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import compression from "compression";
 import cors from "cors";
 import router from "./Router/index";
+import dbContext from "./DataBase/DbContext";
+import seedDatabase from "./DataBase/SeedData";
 
 const app = express();
 
@@ -16,12 +18,27 @@ app.use(
 
 app.use(compression());
 app.use(cookieParser());
-app.use(bodyParse.json());
+app.use(bodyParser.json());
 
 const server = http.createServer(app);
 
-server.listen(8080, () => {
-  console.log("server running on http port 8080 🚀");
-});
-
 app.use("/", router());
+
+const startServer = async () => {
+  try {
+    await dbContext.authenticate();
+    console.log("Database connection has been established successfully.");
+
+    await dbContext.sync({ alter: true });
+    seedDatabase();
+
+    server.listen(8080, () => {
+      console.log("Server running on HTTP port 8080 🚀");
+    });
+  } catch (error) {
+    console.error("Unable to connect to the database:", error);
+    process.exit(1);
+  }
+};
+
+startServer();
